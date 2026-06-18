@@ -13,12 +13,18 @@ export default async function DashboardPage() {
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">WhatsApp Campaign Sender</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Signed in as <span className="font-medium text-foreground">{session.clientId}</span>
+          <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
+            <span>Signed in as <span className="font-medium text-foreground">{session.clientId}</span></span>
             {session.role === "admin" && (
-              <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                admin
-              </span>
+              <>
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                  admin
+                </span>
+                <span className="text-border">•</span>
+                <a href="/admin" className="text-primary hover:underline font-medium">
+                  Admin Panel
+                </a>
+              </>
             )}
           </p>
         </div>

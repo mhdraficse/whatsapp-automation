@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
+import { getClientWebhookUrl } from "@/lib/auth"
 import { saveCampaign } from "@/lib/campaign-store"
 
 // Default webhook URL (overridable via env var)
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Server-side env vars.
-  const webhookUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || DEFAULT_WEBHOOK_URL
+  const globalWebhookUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || DEFAULT_WEBHOOK_URL
+  const clientWebhookUrl = await getClientWebhookUrl(session.clientId)
+  const webhookUrl = clientWebhookUrl || globalWebhookUrl
   const apiKey = process.env.N8N_API_KEY
 
   if (!apiKey) {

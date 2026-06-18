@@ -8,25 +8,14 @@ export type SessionPayload = {
   role: "admin" | "client"
 }
 
-/**
- * Client account directory.
- *
- * - The admin account is configured purely via env vars (ADMIN_EMAIL / ADMIN_PASSWORD).
- * - Demo client accounts live in the in-memory map below. To add more clients,
- *   just add another entry to DEMO_CLIENTS (or replace this whole function with
- *   a real DB lookup later — the rest of the app only depends on verifyCredentials).
- */
-const DEMO_CLIENTS: Record<string, { password: string; role: "client" }> = {
-  "asystirunelveli@gmail.com": { password: "asys123", role: "client" },
-  "client2@example.com": { password: "client2pass", role: "client" },
-}
+import { getClientConfig } from "./client-store"
 
 /**
  * Validate an email/password pair.
  * Returns a session payload on success, or null on any failure.
  * NOTE: callers must show a generic error and never reveal which field was wrong.
  */
-export function verifyCredentials(email: string, password: string): SessionPayload | null {
+export async function verifyCredentials(email: string, password: string): Promise<SessionPayload | null> {
   const normalized = email.trim().toLowerCase()
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
@@ -35,12 +24,17 @@ export function verifyCredentials(email: string, password: string): SessionPaylo
     return { clientId: normalized, role: "admin" }
   }
 
-  const demo = DEMO_CLIENTS[normalized]
-  if (demo && password === demo.password) {
-    return { clientId: normalized, role: demo.role }
+  const client = await getClientConfig(normalized)
+  if (client && password === client.passwordHash) {
+    return { clientId: normalized, role: "client" }
   }
 
   return null
+}
+
+export async function getClientWebhookUrl(email: string): Promise<string | undefined> {
+  const client = await getClientConfig(email)
+  return client?.webhookUrl
 }
 
 function getSecretKey(): Uint8Array {

@@ -15,7 +15,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   const email = String(formData.get("email") ?? "")
   const password = String(formData.get("password") ?? "")
 
-  const session = verifyCredentials(email, password)
+  const session = await verifyCredentials(email, password)
   if (!session) {
     // Generic message — never reveal which field was wrong.
     return { error: "Invalid credentials" }
