@@ -12,7 +12,10 @@ export type Campaign = {
   clientId: string
 }
 
-const FILE_PATH = path.join(process.cwd(), "campaigns.json")
+const isVercel = process.env.VERCEL === "1"
+const FILE_PATH = isVercel
+  ? path.join("/tmp", "campaigns.json")
+  : path.join(process.cwd(), "campaigns.json")
 
 async function ensureFileExists() {
   try {
@@ -69,7 +72,9 @@ export type CampaignLog = {
   errorMessage?: string
 }
 
-const LOGS_FILE_PATH = path.join(process.cwd(), "campaign-logs.json")
+const LOGS_FILE_PATH = isVercel
+  ? path.join("/tmp", "campaign-logs.json")
+  : path.join(process.cwd(), "campaign-logs.json")
 
 async function ensureLogsFileExists() {
   try {
