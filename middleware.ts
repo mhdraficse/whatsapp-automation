@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth"
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/jwt"
 
 // Protect the dashboard. API routes do their own session checks (so they can
 // return 401 JSON instead of redirecting).

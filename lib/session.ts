@@ -1,5 +1,5 @@
 import { cookies } from "next/headers"
-import { SESSION_COOKIE, verifySessionToken, type SessionPayload } from "@/lib/auth"
+import { SESSION_COOKIE, verifySessionToken, type SessionPayload } from "@/lib/jwt"
 
 /**
  * Read and verify the current session from the HTTP-only cookie.

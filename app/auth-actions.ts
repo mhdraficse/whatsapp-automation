@@ -6,8 +6,8 @@ import {
   SESSION_COOKIE,
   createSessionToken,
   sessionCookieOptions,
-  verifyCredentials,
-} from "@/lib/auth"
+} from "@/lib/jwt"
+import { verifyCredentials } from "@/lib/auth"
 
 export type LoginState = { error?: string }
 
