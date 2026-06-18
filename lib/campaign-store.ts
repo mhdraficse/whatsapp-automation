@@ -1,5 +1,9 @@
-import fs from "fs/promises"
-import path from "path"
+import { Redis } from "ioredis"
+
+let redis: Redis | null = null
+if (process.env.REDIS_URL) {
+  redis = new Redis(process.env.REDIS_URL)
+}
 
 export type Campaign = {
   campaignId: string
@@ -12,26 +16,14 @@ export type Campaign = {
   clientId: string
 }
 
-const isVercel = process.env.VERCEL === "1"
-const FILE_PATH = isVercel
-  ? path.join("/tmp", "campaigns.json")
-  : path.join(process.cwd(), "campaigns.json")
-
-async function ensureFileExists() {
-  try {
-    await fs.access(FILE_PATH)
-  } catch {
-    // If file doesn't exist, create it with an empty array.
-    await fs.writeFile(FILE_PATH, JSON.stringify([], null, 2), "utf-8")
-  }
-}
+const CAMPAIGNS_KEY = "wcs_campaigns"
+const LOGS_KEY_PREFIX = "wcs_logs:"
 
 export async function getCampaigns(clientId: string): Promise<Campaign[]> {
+  if (!redis) return []
   try {
-    await ensureFileExists()
-    const content = await fs.readFile(FILE_PATH, "utf-8")
-    const allCampaigns: Campaign[] = JSON.parse(content || "[]")
-    // Filter campaigns belonging to this clientId
+    const data = await redis.get(CAMPAIGNS_KEY)
+    const allCampaigns: Campaign[] = data ? JSON.parse(data) : []
     return allCampaigns.filter((c) => c.clientId === clientId)
   } catch (error) {
     console.error("Error reading campaigns:", error)
@@ -43,23 +35,24 @@ export async function saveCampaign(
   clientId: string,
   campaign: { campaignId: string; campaignName: string; total: number }
 ): Promise<Campaign> {
-  await ensureFileExists()
-  const content = await fs.readFile(FILE_PATH, "utf-8")
-  const allCampaigns: Campaign[] = JSON.parse(content || "[]")
+  if (!redis) throw new Error("REDIS_URL not configured")
+  
+  const data = await redis.get(CAMPAIGNS_KEY)
+  const allCampaigns: Campaign[] = data ? JSON.parse(data) : []
 
   const newCampaign: Campaign = {
     campaignId: campaign.campaignId,
     campaignName: campaign.campaignName,
     createdAt: new Date().toISOString(),
     total: campaign.total,
-    success: 0, // Now updated via n8n webhook
+    success: 0,
     failed: 0,
     status: "done",
     clientId,
   }
 
-  allCampaigns.unshift(newCampaign) // Add to the beginning so it shows first
-  await fs.writeFile(FILE_PATH, JSON.stringify(allCampaigns, null, 2), "utf-8")
+  allCampaigns.unshift(newCampaign)
+  await redis.set(CAMPAIGNS_KEY, JSON.stringify(allCampaigns))
   return newCampaign
 }
 
@@ -72,50 +65,38 @@ export type CampaignLog = {
   errorMessage?: string
 }
 
-const LOGS_FILE_PATH = isVercel
-  ? path.join("/tmp", "campaign-logs.json")
-  : path.join(process.cwd(), "campaign-logs.json")
-
-async function ensureLogsFileExists() {
-  try {
-    await fs.access(LOGS_FILE_PATH)
-  } catch {
-    await fs.writeFile(LOGS_FILE_PATH, JSON.stringify([], null, 2), "utf-8")
-  }
-}
-
 export async function saveCampaignLog(log: CampaignLog) {
-  await ensureLogsFileExists()
-  const content = await fs.readFile(LOGS_FILE_PATH, "utf-8")
-  const allLogs: CampaignLog[] = JSON.parse(content || "[]")
-  allLogs.push(log)
-  await fs.writeFile(LOGS_FILE_PATH, JSON.stringify(allLogs, null, 2), "utf-8")
+  if (!redis) return
+  
+  // 1. Add log to specific campaign list
+  const logKey = `${LOGS_KEY_PREFIX}${log.campaignId}`
+  await redis.lpush(logKey, JSON.stringify(log))
+  // Optional: cap logs at 1000
+  await redis.ltrim(logKey, 0, 999)
 
-  // Update campaign success/failed counts in campaigns.json
-  await ensureFileExists()
-  const campsContent = await fs.readFile(FILE_PATH, "utf-8")
-  const allCampaigns: Campaign[] = JSON.parse(campsContent || "[]")
+  // 2. Update campaign success/failed counts
+  const data = await redis.get(CAMPAIGNS_KEY)
+  const allCampaigns: Campaign[] = data ? JSON.parse(data) : []
   const campaign = allCampaigns.find(c => c.campaignId === log.campaignId)
+  
   if (campaign) {
     if (log.status === "success") {
       campaign.success += 1
     } else {
       campaign.failed += 1
     }
-    // We initially assumed success = total in saveCampaign, let's fix that too
-    await fs.writeFile(FILE_PATH, JSON.stringify(allCampaigns, null, 2), "utf-8")
+    await redis.set(CAMPAIGNS_KEY, JSON.stringify(allCampaigns))
   }
 }
 
 export async function getCampaignLogs(campaignId: string): Promise<CampaignLog[]> {
+  if (!redis) return []
   try {
-    await ensureLogsFileExists()
-    const content = await fs.readFile(LOGS_FILE_PATH, "utf-8")
-    const allLogs: CampaignLog[] = JSON.parse(content || "[]")
-    return allLogs.filter(log => log.campaignId === campaignId)
+    const logKey = `${LOGS_KEY_PREFIX}${campaignId}`
+    const rawLogs = await redis.lrange(logKey, 0, -1)
+    return rawLogs.map(str => JSON.parse(str))
   } catch (error) {
     console.error("Error reading campaign logs:", error)
     return []
   }
 }
-

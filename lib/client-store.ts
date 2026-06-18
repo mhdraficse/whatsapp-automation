@@ -1,5 +1,9 @@
-import fs from "fs/promises"
-import path from "path"
+import { Redis } from "ioredis"
+
+let redis: Redis | null = null
+if (process.env.REDIS_URL) {
+  redis = new Redis(process.env.REDIS_URL)
+}
 
 export type ClientConfig = {
   email: string
@@ -8,30 +12,25 @@ export type ClientConfig = {
   createdAt: string
 }
 
-const CLIENTS_FILE_PATH = path.join(process.cwd(), "clients.json")
-
-async function ensureClientsFileExists() {
-  try {
-    await fs.access(CLIENTS_FILE_PATH)
-  } catch {
-    // Initialize with an empty array if not found
-    await fs.writeFile(CLIENTS_FILE_PATH, JSON.stringify([], null, 2), "utf-8")
-  }
-}
+const CLIENTS_KEY = "wcs_clients"
 
 export async function getClients(): Promise<ClientConfig[]> {
+  if (!redis) {
+    console.warn("No REDIS_URL found. Returning empty clients.")
+    return []
+  }
   try {
-    await ensureClientsFileExists()
-    const content = await fs.readFile(CLIENTS_FILE_PATH, "utf-8")
-    return JSON.parse(content || "[]")
+    const data = await redis.get(CLIENTS_KEY)
+    return data ? JSON.parse(data) : []
   } catch (error) {
-    console.error("Error reading clients:", error)
+    console.error("Error reading clients from Redis:", error)
     return []
   }
 }
 
 export async function saveClient(client: Omit<ClientConfig, "createdAt">): Promise<ClientConfig> {
-  await ensureClientsFileExists()
+  if (!redis) throw new Error("REDIS_URL not configured")
+  
   const clients = await getClients()
   const existingIndex = clients.findIndex(c => c.email.toLowerCase() === client.email.toLowerCase())
   
@@ -42,24 +41,24 @@ export async function saveClient(client: Omit<ClientConfig, "createdAt">): Promi
   }
 
   if (existingIndex >= 0) {
-    // Preserve createdAt if updating
     newClient.createdAt = clients[existingIndex].createdAt
     clients[existingIndex] = newClient
   } else {
     clients.push(newClient)
   }
 
-  await fs.writeFile(CLIENTS_FILE_PATH, JSON.stringify(clients, null, 2), "utf-8")
+  await redis.set(CLIENTS_KEY, JSON.stringify(clients))
   return newClient
 }
 
 export async function deleteClient(email: string): Promise<boolean> {
-  await ensureClientsFileExists()
+  if (!redis) return false
+  
   const clients = await getClients()
   const filtered = clients.filter(c => c.email.toLowerCase() !== email.toLowerCase())
   
   if (filtered.length !== clients.length) {
-    await fs.writeFile(CLIENTS_FILE_PATH, JSON.stringify(filtered, null, 2), "utf-8")
+    await redis.set(CLIENTS_KEY, JSON.stringify(filtered))
     return true
   }
   return false
