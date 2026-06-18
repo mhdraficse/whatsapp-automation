@@ -1,0 +1,52 @@
+[
+  {
+    "campaignId": "CAMP-1781718513920-YN4IEN",
+    "campaignName": "1",
+    "createdAt": "2026-06-17T17:48:30.639Z",
+    "total": 2,
+    "success": 0,
+    "failed": 0,
+    "status": "done",
+    "clientId": "you@example.com"
+  },
+  {
+    "campaignId": "CAMP-1781718467346-W3CHFT",
+    "campaignName": "1",
+    "createdAt": "2026-06-17T17:47:44.068Z",
+    "total": 2,
+    "success": 0,
+    "failed": 0,
+    "status": "done",
+    "clientId": "you@example.com"
+  },
+  {
+    "campaignId": "CAMP-1781718377594-NCMLMS",
+    "campaignName": "1",
+    "createdAt": "2026-06-17T17:46:14.330Z",
+    "total": 2,
+    "success": 0,
+    "failed": 0,
+    "status": "done",
+    "clientId": "you@example.com"
+  },
+  {
+    "campaignId": "CAMP-1781718172793-U2J1E7",
+    "campaignName": "1",
+    "createdAt": "2026-06-17T17:42:49.551Z",
+    "total": 1,
+    "success": 0,
+    "failed": 0,
+    "status": "done",
+    "clientId": "you@example.com"
+  },
+  {
+    "campaignId": "CAMP-1781717920362-8Z8PMW",
+    "campaignName": "1",
+    "createdAt": "2026-06-17T17:38:37.068Z",
+    "total": 1,
+    "success": 0,
+    "failed": 0,
+    "status": "done",
+    "clientId": "you@example.com"
+  }
+]
