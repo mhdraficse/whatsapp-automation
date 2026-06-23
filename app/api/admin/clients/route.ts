@@ -29,7 +29,9 @@ export async function POST(req: NextRequest) {
     const newClient = await saveClient({
       email: body.email,
       passwordHash: body.passwordHash,
-      webhookUrl: body.webhookUrl || undefined
+      webhookUrl: body.webhookUrl || undefined,
+      instanceName: body.instanceName || undefined,
+      incomingWebhookUrl: body.incomingWebhookUrl || undefined
     })
 
     return NextResponse.json(newClient)

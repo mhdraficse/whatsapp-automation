@@ -6,6 +6,8 @@ type ClientConfig = {
   email: string
   passwordHash: string
   webhookUrl?: string
+  instanceName?: string
+  incomingWebhookUrl?: string
   createdAt: string
 }
 
@@ -19,7 +21,51 @@ export function AdminDashboard() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [webhookUrl, setWebhookUrl] = useState("")
+  const [instanceName, setInstanceName] = useState("")
+  const [incomingWebhookUrl, setIncomingWebhookUrl] = useState("")
   const [submitting, setSubmitting] = useState(false)
+
+  // Webhook Testing State
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [testingWebhook, setTestingWebhook] = useState(false)
+  const [incomingTestResult, setIncomingTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [testingIncomingWebhook, setTestingIncomingWebhook] = useState(false)
+
+  async function handleTestWebhook() {
+    setTestingWebhook(true)
+    setTestResult(null)
+    try {
+      const res = await fetch("/api/admin/test-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl })
+      })
+      const data = await res.json()
+      setTestResult(data)
+    } catch (err: any) {
+      setTestResult({ success: false, message: "Network error occurred." })
+    } finally {
+      setTestingWebhook(false)
+    }
+  }
+
+  async function handleTestIncomingWebhook() {
+    setTestingIncomingWebhook(true)
+    setIncomingTestResult(null)
+    try {
+      const res = await fetch("/api/admin/test-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl: incomingWebhookUrl })
+      })
+      const data = await res.json()
+      setIncomingTestResult(data)
+    } catch (err: any) {
+      setIncomingTestResult({ success: false, message: "Network error occurred." })
+    } finally {
+      setTestingIncomingWebhook(false)
+    }
+  }
 
   useEffect(() => {
     fetchClients()
@@ -48,7 +94,13 @@ export function AdminDashboard() {
       const res = await fetch("/api/admin/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, passwordHash: password, webhookUrl })
+        body: JSON.stringify({ 
+          email, 
+          passwordHash: password, 
+          webhookUrl,
+          instanceName,
+          incomingWebhookUrl
+        })
       })
 
       if (!res.ok) throw new Error("Failed to save client")
@@ -80,6 +132,8 @@ export function AdminDashboard() {
     setEmail(client.email)
     setPassword(client.passwordHash)
     setWebhookUrl(client.webhookUrl || "")
+    setInstanceName(client.instanceName || "")
+    setIncomingWebhookUrl(client.incomingWebhookUrl || "")
     setIsEditing(true)
     window.scrollTo(0, 0)
   }
@@ -88,7 +142,11 @@ export function AdminDashboard() {
     setEmail("")
     setPassword("")
     setWebhookUrl("")
+    setInstanceName("")
+    setIncomingWebhookUrl("")
     setIsEditing(false)
+    setTestResult(null)
+    setIncomingTestResult(null)
   }
 
   if (loading) return <div>Loading admin data...</div>
@@ -105,7 +163,7 @@ export function AdminDashboard() {
       <section className="rounded-lg border border-border bg-card p-6 text-card-foreground">
         <h2 className="mb-4 text-lg font-semibold">{isEditing ? "Edit Client" : "Add New Client"}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Email Address</label>
               <input
@@ -129,19 +187,82 @@ export function AdminDashboard() {
                 placeholder="Secure password"
               />
             </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Instance Name (Evolution API)</label>
+              <input
+                type="text"
+                value={instanceName}
+                onChange={e => setInstanceName(e.target.value)}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="e.g. jameel"
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Webhook URL (Optional)</label>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={e => setWebhookUrl(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              placeholder="https://rafproj1.sitesv2.../webhook/..."
-            />
-            <p className="text-xs text-muted-foreground">If left blank, it falls back to the default webhook in .env.local</p>
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Campaign Webhook URL (Optional)</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={webhookUrl}
+                  onChange={e => {
+                    setWebhookUrl(e.target.value)
+                    setTestResult(null)
+                  }}
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="https://.../webhook/..."
+                />
+                <button
+                  type="button"
+                  onClick={handleTestWebhook}
+                  disabled={testingWebhook}
+                  className="rounded-md bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+                >
+                  {testingWebhook ? "Testing..." : "Test"}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">For sending campaigns. Falls back to default if blank.</p>
+              {testResult && (
+                <p className={`text-sm mt-1 ${testResult.success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                  {testResult.success ? "✓ " : "✗ "}{testResult.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Auto-Reply Webhook URL (Optional)</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={incomingWebhookUrl}
+                  onChange={e => {
+                    setIncomingWebhookUrl(e.target.value)
+                    setIncomingTestResult(null)
+                  }}
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="https://.../webhook/..."
+                />
+                <button
+                  type="button"
+                  onClick={handleTestIncomingWebhook}
+                  disabled={testingIncomingWebhook}
+                  className="rounded-md bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+                >
+                  {testingIncomingWebhook ? "Testing..." : "Test"}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">For receiving messages (Auto-Reply). Falls back to default if blank.</p>
+              {incomingTestResult && (
+                <p className={`text-sm mt-1 ${incomingTestResult.success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                  {incomingTestResult.success ? "✓ " : "✗ "}{incomingTestResult.message}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
+
+
+          <div className="flex gap-2 mt-2">
             <button
               type="submit"
               disabled={submitting}
@@ -169,23 +290,27 @@ export function AdminDashboard() {
             <thead className="border-b border-border bg-secondary/50 text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Password</th>
-                <th className="px-4 py-3 font-medium">Webhook Override</th>
+                <th className="px-4 py-3 font-medium">Instance</th>
+                <th className="px-4 py-3 font-medium">Campaign Webhook</th>
+                <th className="px-4 py-3 font-medium">Auto-Reply Webhook</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {clients.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No clients created yet.</td>
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No clients created yet.</td>
                 </tr>
               ) : (
                 clients.map(client => (
                   <tr key={client.email} className="border-b border-border last:border-0">
                     <td className="px-4 py-3 font-medium">{client.email}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{client.passwordHash}</td>
-                    <td className="px-4 py-3 max-w-[200px] truncate font-mono text-xs text-muted-foreground" title={client.webhookUrl}>
+                    <td className="px-4 py-3 font-medium">{client.instanceName || <span className="italic text-muted-foreground">None</span>}</td>
+                    <td className="px-4 py-3 max-w-[150px] truncate font-mono text-xs text-muted-foreground" title={client.webhookUrl}>
                       {client.webhookUrl || <span className="italic">Default</span>}
+                    </td>
+                    <td className="px-4 py-3 max-w-[150px] truncate font-mono text-xs text-muted-foreground" title={client.incomingWebhookUrl}>
+                      {client.incomingWebhookUrl || <span className="italic">Default</span>}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => handleEdit(client)} className="text-primary hover:underline text-xs mr-3">Edit</button>
