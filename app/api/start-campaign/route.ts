@@ -15,7 +15,7 @@ type NumberRow = { phone: string; name: string }
 type TemplateEntry =
   | string
   | {
-      type: "text" | "image" | "video" | "document" | "audio"
+      type: "text" | "image" | "video"
       text?: string
       mediaUrl?: string
       caption?: string
@@ -35,7 +35,7 @@ type CampaignPayload = {
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
 
-const VALID_TYPES = ["text", "image", "video", "document", "audio"] as const
+const VALID_TYPES = ["text", "image", "video"] as const
 
 function validateTemplate(t: unknown, idx: number): string | null {
   if (typeof t === "string") {

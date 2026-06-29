@@ -130,6 +130,36 @@ export async function saveCampaignLog(log: CampaignLog) {
   }
 }
 
+export async function deleteCampaign(clientId: string, campaignId: string): Promise<boolean> {
+  if (!supabase) return false
+  // Delete logs first (FK constraint), then the campaign row
+  await supabase.from("campaign_logs").delete().eq("campaign_id", campaignId)
+  const { error } = await supabase
+    .from("campaigns")
+    .delete()
+    .eq("campaign_id", campaignId)
+    .eq("client_id", clientId) // scoped to the requesting client
+  if (error) { console.error("Error deleting campaign:", error); return false }
+  return true
+}
+
+export async function deleteAllCampaigns(clientId: string): Promise<boolean> {
+  if (!supabase) return false
+  // Fetch all campaign IDs for this client first
+  const { data, error: fetchErr } = await supabase
+    .from("campaigns")
+    .select("campaign_id")
+    .eq("client_id", clientId)
+  if (fetchErr || !data) return false
+  const ids = data.map((r: any) => r.campaign_id)
+  if (ids.length) {
+    await supabase.from("campaign_logs").delete().in("campaign_id", ids)
+  }
+  const { error } = await supabase.from("campaigns").delete().eq("client_id", clientId)
+  if (error) { console.error("Error deleting all campaigns:", error); return false }
+  return true
+}
+
 export async function getCampaignLogs(campaignId: string): Promise<CampaignLog[]> {
   if (!supabase) return []
   

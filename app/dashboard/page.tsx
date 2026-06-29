@@ -4,7 +4,6 @@ import { getSession } from "@/lib/session"
 import { logoutAction } from "@/app/auth-actions"
 
 export default async function DashboardPage() {
-  // Defense in depth: middleware already guards this route, but verify again here.
   const session = await getSession()
   if (!session) redirect("/login")
 
@@ -13,7 +12,7 @@ export default async function DashboardPage() {
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">WhatsApp Campaign Sender</h1>
-          <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
+          <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
             <span>Signed in as <span className="font-medium text-foreground">{session.clientId}</span></span>
             {session.role === "admin" && (
               <>

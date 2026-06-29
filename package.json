@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:evolution": "node scripts/test-evolution-api.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -14,6 +15,7 @@
     "@vercel/analytics": "1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^16.4.7",
     "imagekit": "^6.0.0",
     "jose": "^6.2.3",
     "lucide-react": "^1.16.0",

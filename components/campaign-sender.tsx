@@ -5,7 +5,7 @@ import { parseNumbers, type NumberRow } from "@/lib/campaign"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type MsgType = "text" | "image" | "video" | "document" | "audio"
+export type MsgType = "text" | "image" | "video"
 
 /** A single message template. Matches the n8n workflow schema exactly. */
 export type TemplateEntry =
@@ -104,8 +104,6 @@ const MSG_TYPE_LABELS: Record<MsgType, string> = {
   text: "📝 Text",
   image: "🖼️ Image",
   video: "🎬 Video",
-  document: "📄 Document",
-  audio: "🎵 Audio",
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -375,11 +373,7 @@ export function CampaignSender({
                             placeholder={
                               row.type === "image"
                                 ? "https://yourcdn.com/banner.jpg"
-                                : row.type === "video"
-                                ? "https://yourcdn.com/promo.mp4"
-                                : row.type === "document"
-                                ? "https://yourcdn.com/offer.pdf"
-                                : "https://yourcdn.com/audio.mp3"
+                                : "https://yourcdn.com/promo.mp4"
                             }
                             className="rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring flex-1"
                           />
@@ -388,6 +382,7 @@ export function CampaignSender({
                               {row.isUploading ? "Uploading..." : "⬆️ Upload File to ImageKit"}
                               <input 
                                 type="file" 
+                                accept={row.type === "image" ? "image/*" : "video/*"}
                                 className="sr-only" 
                                 disabled={row.isUploading}
                                 onChange={(e) => {
@@ -402,23 +397,7 @@ export function CampaignSender({
                         </div>
                       </div>
 
-                      {row.type === "document" && (
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs text-muted-foreground">
-                            File name <span className="text-destructive">*</span>
-                            <span className="ml-1 opacity-60">
-                              (shown to recipient, e.g. Offer-June.pdf)
-                            </span>
-                          </label>
-                          <input
-                            type="text"
-                            value={row.fileName}
-                            onChange={(e) => updateRow(row.id, { fileName: e.target.value })}
-                            placeholder="ACME-Offer-June.pdf"
-                            className="rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                          />
-                        </div>
-                      )}
+
 
                       <div className="flex flex-col gap-1">
                         <label className="text-xs text-muted-foreground">
